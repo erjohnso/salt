@@ -18,28 +18,44 @@ Google Compute Engine Module
 ============================
 
 The Google Compute Engine module.  This module interfaces with Google Compute
-Engine.  To authenticate to GCE, you will need to create a Service Account.
+Engine.  To authenticate to GCE, you will either need to be using salt-cloud
+from within a GCE instance, or you will need to create a Service Account for
+use from outside of the GCE environment.
 
-Setting up Service Account Authentication:
-  - Go to the Cloud Console at: https://cloud.google.com/console.
+Fixes:
+  - https://github.com/saltstack/salt/issues/19236 (pd-ssd)
+    - fixed in https://github.com/saltstack/salt/issues/17097
+  - https://github.com/saltstack/salt/issues/16179 (debug mode outputs bootstrap script twice)
+  - https://github.com/saltstack/salt/issues/15590 (config nesting?)
+  - https://github.com/saltstack/salt/issues/14985 (metadata)
+  - https://github.com/saltstack/salt/issues/12465 (fix docs)
+  - https://github.com/saltstack/salt/issues/11669 (fix docs, FQDN for VM)
+
+
+Setting up Service Account Authentication (using outside of GCE):
+  - Go to the Developers Console at: https://console.developers.google.com/
   - Create or navigate to your desired Project.
-  - Make sure Google Compute Engine service is enabled under the Services
-    section.
-  - Go to "APIs and auth" and then the "Registered apps" section.
-  - Click the "REGISTER APP" button and give it a meaningful name.
-  - Select "Web Application" and click "Register".
-  - Select Certificate, then "Generate Certificate"
+  - Make sure Billing and Google Compute Engine service is enabled.
+  - Go to "APIs and auth" and either download the JSON key for an existing
+    Service Account, or create a new OAuth "Client ID" Serive Account.
   - Copy the Email Address for inclusion in your /etc/salt/cloud file
-    in the 'service_account_email_address' setting.
-  - Download the Private Key
-  - The key that you download is a PKCS12 key.  It needs to be converted to
-    the PEM format.
+    in the 'service_account_email_address' setting. This should end in,
+    '@developer.gserviceaccount.com'.
+  - Download the Private Key in JSON format (preferred) or P12 format.
+  - If you use the P12 key, it must be converted to PEM format.
   - Convert the key using OpenSSL (the default password is 'notasecret'):
     C{openssl pkcs12 -in PRIVKEY.p12 -passin pass:notasecret \
     -nodes -nocerts | openssl rsa -out ~/PRIVKEY.pem}
-  - Add the full path name of the converted private key to your
-    /etc/salt/cloud file as 'service_account_private_key' setting.
-  - Consider using a more secure location for your private key.
+  - Add the full path name of the JSON key file or converted private key to
+    your /etc/salt/cloud file as 'service_account_private_key' setting.
+  - Consider using a secure location and permissions for your private key.
+
+Using salt-cloud within a GCE instance:
+  - If you are running salt-cloud from a GCE instance, it can be configured
+    to use the internal metadata service for authorization tokens.
+  - Make sure to set 'project' and 'service_account_email_address', but you
+    do not need to specify the 'service_account_private_key'.
+
 
 .. code-block:: yaml
 
@@ -48,8 +64,8 @@ Setting up Service Account Authentication:
       project: google.com:erjohnso
       # The Service ACcount client ID
       service_account_email_address: 1234567890@developer.gserviceaccount.com
-      # The location of the private key (PEM format)
-      service_account_private_key: /home/erjohnso/PRIVKEY.pem
+      # The location of the private key (JSON format)
+      service_account_private_key: /home/erjohnso/PRIVKEY.json
       provider: gce
       # Specify whether to use public or private IP for deploy script.
       # Valid options are:
@@ -109,7 +125,7 @@ log = logging.getLogger(__name__)
 
 # custom UA
 _UA_PRODUCT = 'salt-cloud'
-_UA_VERSION = '0.2.0'
+_UA_VERSION = '0.3.0'
 
 # Redirect GCE functions to this module namespace
 avail_locations = namespaced_function(avail_locations, globals())
